@@ -1,0 +1,115 @@
+@using BlazorRenderModes.Models
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">TODO List (@TodoItems.Count(i => !i.IsCompleted) remaining)</h5>
+    </div>
+    <div class="card-body">
+        @if (!IsReadOnly)
+        {
+            <div class="mb-3">
+                <div class="input-group">
+                    <input type="text" class="form-control" placeholder="Add a new todo..." 
+                           @bind="newTodoTitle" @onkeypress="HandleKeyPress">
+                    <button class="btn btn-primary" type="button" @onclick="AddTodo" disabled="@string.IsNullOrWhiteSpace(newTodoTitle)">
+                        Add
+                    </button>
+                </div>
+            </div>
+        }
+
+        @if (TodoItems.Any())
+        {
+            <div class="mb-3">
+                <div class="btn-group btn-group-sm" role="group">
+                    <input type="radio" class="btn-check" name="filter" id="all" checked="@(currentFilter == FilterType.All)" 
+                           @onchange="() => SetFilter(FilterType.All)">
+                    <label class="btn btn-outline-secondary" for="all">All (@TodoItems.Count)</label>
+
+                    <input type="radio" class="btn-check" name="filter" id="active" checked="@(currentFilter == FilterType.Active)"
+                           @onchange="() => SetFilter(FilterType.Active)">
+                    <label class="btn btn-outline-secondary" for="active">Active (@TodoItems.Count(i => !i.IsCompleted))</label>
+
+                    <input type="radio" class="btn-check" name="filter" id="completed" checked="@(currentFilter == FilterType.Completed)"
+                           @onchange="() => SetFilter(FilterType.Completed)">
+                    <label class="btn btn-outline-secondary" for="completed">Completed (@TodoItems.Count(i => i.IsCompleted))</label>
+                </div>
+            </div>
+
+            @foreach (var item in FilteredTodos)
+            {
+                <TodoItemComponent Item="item" IsReadOnly="IsReadOnly" 
+                                 OnToggleComplete="ToggleComplete" 
+                                 OnDelete="DeleteTodo" />
+            }
+        }
+        else
+        {
+            <div class="text-center text-muted py-4">
+                <i class="bi bi-check-circle display-4"></i>
+                <p class="mt-2">No todos yet. Add one above!</p>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<TodoItem> TodoItems { get; set; } = new();
+    [Parameter] public bool IsReadOnly { get; set; } = true;
+    [Parameter] public EventCallback<TodoItem> OnAddTodo { get; set; }
+    [Parameter] public EventCallback<TodoItem> OnToggleTodo { get; set; }
+    [Parameter] public EventCallback<TodoItem> OnDeleteTodo { get; set; }
+
+    private string newTodoTitle = string.Empty;
+    private FilterType currentFilter = FilterType.All;
+
+    private enum FilterType { All, Active, Completed }
+
+    private IEnumerable<TodoItem> FilteredTodos => currentFilter switch
+    {
+        FilterType.Active => TodoItems.Where(t => !t.IsCompleted),
+        FilterType.Completed => TodoItems.Where(t => t.IsCompleted),
+        _ => TodoItems
+    };
+
+    private void SetFilter(FilterType filter)
+    {
+        currentFilter = filter;
+    }
+
+    private async Task AddTodo()
+    {
+        if (!string.IsNullOrWhiteSpace(newTodoTitle))
+        {
+            var newTodo = new TodoItem
+            {
+                Id = TodoItems.Count + 1,
+                Title = newTodoTitle.Trim(),
+                IsCompleted = false,
+                CreatedAt = DateTime.Now
+            };
+
+            await OnAddTodo.InvokeAsync(newTodo);
+            newTodoTitle = string.Empty;
+        }
+    }
+
+    private async Task ToggleComplete(TodoItem item)
+    {
+        item.IsCompleted = !item.IsCompleted;
+        await OnToggleTodo.InvokeAsync(item);
+    }
+
+    private async Task DeleteTodo(TodoItem item)
+    {
+        await OnDeleteTodo.InvokeAsync(item);
+    }
+
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await AddTodo();
+        }
+    }
+}

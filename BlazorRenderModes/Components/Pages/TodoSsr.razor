@@ -1,0 +1,105 @@
+@page "/todo-ssr"
+@using BlazorRenderModes.Models
+@using BlazorRenderModes.Components.Todo
+
+<PageTitle>TODO - Static SSR</PageTitle>
+
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>TODO App</h1>
+            <span class="badge bg-info fs-6">Static Server-Side Rendering</span>
+        </div>
+        
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i>
+            <strong>Static SSR Mode:</strong> This page is rendered on the server without interactivity. 
+            The form will use traditional HTTP form submissions. Perfect for SEO and fast initial loads.
+        </div>
+
+        <TodoListComponent TodoItems="todoItems" IsReadOnly="true" />
+        
+        <div class="mt-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">Add New TODO (Static Form)</h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" @onsubmit="HandleSubmit" @onsubmit:preventDefault="true">
+                        <div class="input-group">
+                            <input type="text" class="form-control" name="title" 
+                                   placeholder="Enter a new todo..." @bind="newTodoTitle" required>
+                            <button class="btn btn-primary" type="submit">
+                                Add TODO
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <h6>Current TODO Items:</h6>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-primary">@todoItems.Count</h5>
+                            <p class="card-text">Total Items</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-warning">@todoItems.Count(t => !t.IsCompleted)</h5>
+                            <p class="card-text">Pending</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-success">@todoItems.Count(t => t.IsCompleted)</h5>
+                            <p class="card-text">Completed</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<TodoItem> todoItems = new();
+    private string newTodoTitle = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        // Initialize with some sample data
+        todoItems = new List<TodoItem>
+        {
+            new() { Id = 1, Title = "Learn Blazor SSR", IsCompleted = false, CreatedAt = DateTime.Now.AddDays(-3) },
+            new() { Id = 2, Title = "Build TODO app", IsCompleted = true, CreatedAt = DateTime.Now.AddDays(-2) },
+            new() { Id = 3, Title = "Test different render modes", IsCompleted = false, CreatedAt = DateTime.Now.AddDays(-1) },
+            new() { Id = 4, Title = "Deploy to production", IsCompleted = false, CreatedAt = DateTime.Now }
+        };
+    }
+
+    private void HandleSubmit()
+    {
+        if (!string.IsNullOrWhiteSpace(newTodoTitle))
+        {
+            var newTodo = new TodoItem
+            {
+                Id = todoItems.Count + 1,
+                Title = newTodoTitle.Trim(),
+                IsCompleted = false,
+                CreatedAt = DateTime.Now
+            };
+
+            todoItems.Add(newTodo);
+            newTodoTitle = string.Empty;
+        }
+    }
+}
