@@ -1,6 +1,10 @@
 @page "/todo-ssr"
+@page "/todo-ssr/{filter}"
+@using BlazorRenderModes.Client.Constants
 @using BlazorRenderModes.Models
-@using BlazorRenderModes.Components.Todo
+@using BlazorRenderModes.Services
+@inject TodoService TodoService
+@inject NavigationManager Navigation
 
 <PageTitle>TODO - Static SSR</PageTitle>
 
@@ -13,22 +17,22 @@
         
         <div class="alert alert-info">
             <i class="bi bi-info-circle"></i>
-            <strong>Static SSR Mode:</strong> This page is rendered on the server without interactivity. 
-            The form will use traditional HTTP form submissions. Perfect for SEO and fast initial loads.
+            <strong>Enhanced SSR Mode:</strong> This page uses server-side rendering with enhanced forms. 
+            Form submissions happen via fetch requests without page reloads. Perfect for SEO and smooth UX.
         </div>
 
-        <TodoListComponent TodoItems="todoItems" IsReadOnly="true" />
-        
-        <div class="mt-4">
+        <!-- Add New TODO Form -->
+        <div class="mb-4">
             <div class="card">
                 <div class="card-header">
-                    <h6 class="mb-0">Add New TODO (Static Form)</h6>
+                    <h6 class="mb-0">Add New TODO</h6>
                 </div>
                 <div class="card-body">
-                    <form method="post" @onsubmit="HandleSubmit" @onsubmit:preventDefault="true">
+                    <form method="post" @formname="add-todo" @onsubmit="HandleAddTodo" data-enhance>
+                        <AntiforgeryToken />
                         <div class="input-group">
-                            <input type="text" class="form-control" name="title" 
-                                   placeholder="Enter a new todo..." @bind="newTodoTitle" required>
+                            <input type="text" class="form-control" name="NewTodoTitle" 
+                                   placeholder="Enter a new todo..." value="@NewTodoTitle" required>
                             <button class="btn btn-primary" type="submit">
                                 Add TODO
                             </button>
@@ -38,13 +42,86 @@
             </div>
         </div>
 
+        <!-- Filter Navigation -->
+        <div class="mb-3">
+            <div class="btn-group btn-group-sm" role="group">
+                <a href="/todo-ssr" class="btn @(CurrentFilter == TodoFilters.All ? "btn-secondary" : "btn-outline-secondary")">
+                    All (@AllTodos.Count)
+                </a>
+                <a href="/todo-ssr/active" class="btn @(CurrentFilter == TodoFilters.Active ? "btn-secondary" : "btn-outline-secondary")">
+                    Active (@AllTodos.Count(t => !t.IsCompleted))
+                </a>
+                <a href="/todo-ssr/completed" class="btn @(CurrentFilter == TodoFilters.Completed ? "btn-secondary" : "btn-outline-secondary")">
+                    Completed (@AllTodos.Count(t => t.IsCompleted))
+                </a>
+            </div>
+        </div>
+
+        <!-- Todo List -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">TODO List (@FilteredTodos.Count(i => !i.IsCompleted) remaining)</h5>
+            </div>
+            <div class="card-body">
+                @if (FilteredTodos.Any())
+                {
+                    @foreach (var item in FilteredTodos)
+                    {
+                        var toggleFormName = $"toggle-{item.Id}";
+                        var deleteFormName = $"delete-{item.Id}";
+                        var submitButtonId = $"submit-{item.Id}";
+                        
+                        <div class="card mb-2">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="form-check">
+                                        <!-- Toggle Complete Form -->
+                                        <form method="post" @formname="@toggleFormName" @onsubmit="HandleToggleTodo" style="display: inline;" data-enhance>
+                                            <AntiforgeryToken />
+                                            <input type="hidden" name="todoId" value="@item.Id" />
+                                            <button type="submit" style="display: none;" id="@submitButtonId"></button>
+                                            <input class="form-check-input" type="checkbox" 
+                                                   checked="@item.IsCompleted" 
+                                                   onchange="this.form.requestSubmit(document.getElementById('@submitButtonId'))">
+                                            <label class="form-check-label @(item.IsCompleted ? "text-decoration-line-through text-muted" : "")">
+                                                @item.Title
+                                            </label>
+                                        </form>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <small class="text-muted me-2">@item.CreatedAt.ToString("MM/dd/yyyy")</small>
+                                        <!-- Delete Form -->
+                                        <form method="post" @formname="@deleteFormName" @onsubmit="HandleDeleteTodo" style="display: inline;" data-enhance>
+                                            <AntiforgeryToken />
+                                            <input type="hidden" name="todoId" value="@item.Id" />
+                                            <button class="btn btn-outline-danger btn-sm" type="submit">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-check-circle display-4"></i>
+                        <p class="mt-2">No todos @(CurrentFilter == TodoFilters.All ? "" : CurrentFilter) yet!</p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Statistics -->
         <div class="mt-4">
-            <h6>Current TODO Items:</h6>
+            <h6>Statistics:</h6>
             <div class="row">
                 <div class="col-md-4">
                     <div class="card text-center">
                         <div class="card-body">
-                            <h5 class="card-title text-primary">@todoItems.Count</h5>
+                            <h5 class="card-title text-primary">@AllTodos.Count</h5>
                             <p class="card-text">Total Items</p>
                         </div>
                     </div>
@@ -52,7 +129,7 @@
                 <div class="col-md-4">
                     <div class="card text-center">
                         <div class="card-body">
-                            <h5 class="card-title text-warning">@todoItems.Count(t => !t.IsCompleted)</h5>
+                            <h5 class="card-title text-warning">@AllTodos.Count(t => !t.IsCompleted)</h5>
                             <p class="card-text">Pending</p>
                         </div>
                     </div>
@@ -60,7 +137,7 @@
                 <div class="col-md-4">
                     <div class="card text-center">
                         <div class="card-body">
-                            <h5 class="card-title text-success">@todoItems.Count(t => t.IsCompleted)</h5>
+                            <h5 class="card-title text-success">@AllTodos.Count(t => t.IsCompleted)</h5>
                             <p class="card-text">Completed</p>
                         </div>
                     </div>
@@ -71,35 +148,59 @@
 </div>
 
 @code {
-    private List<TodoItem> todoItems = new();
-    private string newTodoTitle = string.Empty;
+    [Parameter] public string? Filter { get; set; }
+    
+    [SupplyParameterFromForm(FormName = "add-todo")]
+    public string? NewTodoTitle { get; set; }
+    
+    [SupplyParameterFromForm]
+    public int TodoId { get; set; }
 
-    protected override void OnInitialized()
+    private string CurrentFilter => string.IsNullOrEmpty(Filter) ? TodoFilters.All : Filter.ToLower();
+    
+    private List<TodoItem> AllTodos => TodoService.GetTodos();
+    
+    private List<TodoItem> FilteredTodos => CurrentFilter switch
     {
-        // Initialize with some sample data
-        todoItems = new List<TodoItem>
-        {
-            new() { Id = 1, Title = "Learn Blazor SSR", IsCompleted = false, CreatedAt = DateTime.Now.AddDays(-3) },
-            new() { Id = 2, Title = "Build TODO app", IsCompleted = true, CreatedAt = DateTime.Now.AddDays(-2) },
-            new() { Id = 3, Title = "Test different render modes", IsCompleted = false, CreatedAt = DateTime.Now.AddDays(-1) },
-            new() { Id = 4, Title = "Deploy to production", IsCompleted = false, CreatedAt = DateTime.Now }
-        };
-    }
+        TodoFilters.Active => AllTodos.Where(t => !t.IsCompleted).ToList(),
+        TodoFilters.Completed => AllTodos.Where(t => t.IsCompleted).ToList(),
+        _ => AllTodos
+    };
 
-    private void HandleSubmit()
+    private void HandleAddTodo()
     {
-        if (!string.IsNullOrWhiteSpace(newTodoTitle))
+        if (!string.IsNullOrWhiteSpace(NewTodoTitle))
         {
-            var newTodo = new TodoItem
-            {
-                Id = todoItems.Count + 1,
-                Title = newTodoTitle.Trim(),
-                IsCompleted = false,
-                CreatedAt = DateTime.Now
-            };
-
-            todoItems.Add(newTodo);
-            newTodoTitle = string.Empty;
+            TodoService.AddTodo(NewTodoTitle);
+            RedirectToCurrentFilter();
         }
+    }
+    
+    private void HandleToggleTodo()
+    {
+        if (TodoId > 0)
+        {
+            var todo = TodoService.GetTodos().FirstOrDefault(t => t.Id == TodoId);
+            if (todo != null)
+            {
+                todo.IsCompleted = !todo.IsCompleted;
+                RedirectToCurrentFilter();
+            }
+        }
+    }
+    
+    private void HandleDeleteTodo()
+    {
+        if (TodoId > 0)
+        {
+            TodoService.DeleteTodo(TodoId);
+            RedirectToCurrentFilter();
+        }
+    }
+    
+    private void RedirectToCurrentFilter()
+    {
+        var redirectUrl = CurrentFilter == TodoFilters.All ? "/todo-ssr" : $"/todo-ssr/{CurrentFilter}";
+        Navigation.NavigateTo(redirectUrl, forceLoad: true);
     }
 }

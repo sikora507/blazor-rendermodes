@@ -1,10 +1,23 @@
 using BlazorRenderModes.Components;
-
-var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+   using BlazorRenderModes.Services;
+   
+   var builder = WebApplication.CreateBuilder(args);
+   
+   // Add services to the container.
+   builder.Services.AddRazorComponents()
+       .AddInteractiveServerComponents()
+       .AddInteractiveWebAssemblyComponents();
+   
+   builder.Services.AddControllers();
+   builder.Services.AddSingleton<TodoService>();
+   builder.Services.AddScoped(sp => 
+{
+    var httpClient = new HttpClient();
+    var config = sp.GetRequiredService<IConfiguration>();
+    var baseUrl = config["ApiBaseUrl"] ?? "https://localhost:7108"; // Default from launchSettings
+    httpClient.BaseAddress = new Uri(baseUrl);
+    return httpClient;
+});
 
 var app = builder.Build();
 
@@ -22,7 +35,10 @@ app.UseHttpsRedirection();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
+app.MapControllers();
 app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+    .AddInteractiveServerRenderMode()
+    .AddInteractiveWebAssemblyRenderMode()
+    .AddAdditionalAssemblies(typeof(BlazorRenderModes.Client._Imports).Assembly);
 
 app.Run();

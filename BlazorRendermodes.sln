@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazorRenderModes", "BlazorRenderModes\BlazorRenderModes.csproj", "{C89F485A-39F8-44AA-A3C9-4F4B8F459250}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazorRenderModes.Client", "BlazorRenderModes.Client\BlazorRenderModes.Client.csproj", "{07F1C033-8B3A-40B6-9A54-578786F1B44E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{C89F485A-39F8-44AA-A3C9-4F4B8F459250}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C89F485A-39F8-44AA-A3C9-4F4B8F459250}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C89F485A-39F8-44AA-A3C9-4F4B8F459250}.Release|Any CPU.Build.0 = Release|Any CPU
+		{07F1C033-8B3A-40B6-9A54-578786F1B44E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{07F1C033-8B3A-40B6-9A54-578786F1B44E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{07F1C033-8B3A-40B6-9A54-578786F1B44E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{07F1C033-8B3A-40B6-9A54-578786F1B44E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
